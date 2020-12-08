@@ -107,7 +107,7 @@ int main (int argc, char **argv)
   }
 
   // Join producer threads
-  for (auto i = 0u; i < num_producers; ++i) {
+  for (auto i = 1u; i < num_producers; ++i) {
     error_code = pthread_join(producer_threads[i], NULL);
     if (error_code) {
       cerr << "Error joining producer thread. Thread ID: " << i << endl;
