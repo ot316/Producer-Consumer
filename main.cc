@@ -25,7 +25,7 @@ int main (int argc, char **argv)
   const uint num_producers = check_arg(argv[3]);
   const uint num_consumers = check_arg(argv[4]);
 
-  int error_code = 0, jobs[queue_size];
+  int error_code = 0;
 
   // Create semaphore set
   const int sem_id = sem_create(SEM_KEY, NUM_SEMAPHORES);
