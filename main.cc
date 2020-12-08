@@ -12,7 +12,7 @@ int main (int argc, char **argv)
 {
   // Random seed for semaphore key
   srand(time(NULL));
-  const int SEM_KEY = rand() % 0xabc + 1;
+  const int SEM_KEY = rand() % 0xabcd + 1;
 
   // Check arguments
   if (!valid_input(argc, argv)) {
