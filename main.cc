@@ -53,12 +53,6 @@ int main (int argc, char **argv)
     cerr << "ID semaphore initialisation error with key: " << SEM_KEY << endl;
     return ERROR;
   }
-  // Prevent producers or consumers being assigned the same ID.
-  error_code = sem_init(sem_id, COUT_SEMPHORE, 0);
-  if (error_code) {
-    cerr << "cout semaphore initialisation error with key: " << SEM_KEY << endl;
-    return ERROR;
-  }
   
   // Initialise producer and consumer threads
   pthread_t producer_threads[num_producers];
