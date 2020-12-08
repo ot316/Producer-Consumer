@@ -32,6 +32,7 @@ using namespace std;
 #define MAX_JOB_TIME 10
 #define TIMEOUT 20
 #define NO_ERROR 0
+#define ERROR -1
 
 
 union semun {
