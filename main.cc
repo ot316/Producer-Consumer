@@ -17,7 +17,7 @@ int main (int argc, char **argv)
   // Check arguments
   if (!valid_input(argc, argv)) {
     cerr << "Incorrect usage. Try '"<< argv[0] <<" <queuesize> <jobs_per_producer> <num_producers> <num_consumers>' where the arguments are integers.\n";
-    return errno;
+    return  -1;
   }
   // Parse arguments
   const uint queue_size = check_arg(argv[1]);
@@ -33,31 +33,31 @@ int main (int argc, char **argv)
   error_code = sem_init(sem_id, MUTEX_SEMAPHORE, 1);
   if (error_code) {
     cerr << "Mutex semaphore initialisation error with key: " << SEM_KEY << endl;
-    return errno;
+    return -1;
   }
   // Prevent a producer from accessing a full buffer
   error_code = sem_init(sem_id, FULL_SEMAPHORE, queue_size);
   if (error_code) {
     cerr << "Full semaphore initialisation error with key: " << SEM_KEY << endl;
-    return errno;
+    return -1;
   }
   // Prevent a consumer accessing an empty buffer
   error_code = sem_init(sem_id, EMPTY_SEMAPHORE, 0);
     if (error_code) {
     cerr << "Empty semaphore initialisation error with key: " << SEM_KEY << endl;
-    return errno;
+    return -1;
   }
   // Prevent producers or consumers being assigned the same ID.
   error_code = sem_init(sem_id, ID_SEMAPHORE, 0);
   if (error_code) {
     cerr << "ID semaphore initialisation error with key: " << SEM_KEY << endl;
-    return errno;
+    return -1;
   }
   // Prevent producers or consumers being assigned the same ID.
   error_code = sem_init(sem_id, COUT_SEMPHORE, 0);
   if (error_code) {
     cerr << "cout semaphore initialisation error with key: " << SEM_KEY << endl;
-    return errno;
+    return -1;
   }
   
   // Initialise producer and consumer threads
@@ -86,11 +86,10 @@ int main (int argc, char **argv)
   auto i = 0u;
   while (i < num_producers) {
     prod_params.thread_id = ++i;
-    prod_params.thread_id+=1;
     error_code = pthread_create (&producer_threads[i], NULL, producer, (void *) &prod_params);
     if (error_code) {
       cerr << "Error creating producer thread. Thread ID: " << i << endl;
-      return errno;
+      return -1;
     }
     sem_wait(sem_id, ID_SEMAPHORE);
   }
@@ -99,11 +98,10 @@ int main (int argc, char **argv)
   i = 0;
   while (i < num_consumers) {
     cons_params.thread_id = ++i;
-    cons_params.thread_id+=1;
     error_code = pthread_create (&consumer_threads[i], NULL, consumer, (void *) &cons_params);
     if (error_code) {
       cerr << "Error creating consumer thread. Thread ID: " << i << endl;
-      return errno;
+      return -1;
     }
     sem_wait(sem_id, ID_SEMAPHORE);
   }
@@ -113,7 +111,7 @@ int main (int argc, char **argv)
     error_code = pthread_join(producer_threads[i], NULL);
     if (error_code) {
       cerr << "Error joining producer thread. Thread ID: " << i << endl;
-      return errno;
+      return -1;
     }
   }
   // Join consumer threads:
@@ -121,11 +119,14 @@ int main (int argc, char **argv)
     error_code = pthread_join(consumer_threads[i], NULL);
       if (error_code) {
       cerr << "Error joining consumer thread. Thread ID: " << i << endl;
-      return errno;
+      return -1;
     }
   }
-  sem_close(sem_id);
-
+  error_code = sem_close(sem_id);
+  if (error_code) {
+    cerr << "Failed to close semaphore set, please do this manually.\n";
+    return -1;
+  }
   return NO_ERROR;
 }
 
@@ -150,8 +151,8 @@ void *producer (void *params)
 
     //check timeout
     if (timeout) {
-      cout << "Producer has timed out. Producer ID: " << id << endl;
-      break;
+      cerr << "Producer has timed out. Producer ID: " << id << endl;
+      pthread_exit(0);
     }
 
     sem_wait(parameters->sem_id, MUTEX_SEMAPHORE);
@@ -165,10 +166,10 @@ void *producer (void *params)
     sem_signal(parameters->sem_id, MUTEX_SEMAPHORE);
     sem_signal(parameters->sem_id, EMPTY_SEMAPHORE);
 
-    cout << "Producer(" << id << "): Job ID " << job_id << " duration " << job_time << ".\n";
+    fprintf(stderr, "Producer(%d): Job ID %d duration %d.\n", id, job_id, job_time);
   }
   if (!timeout)
-    cout << "Producer(" << id << "): No more jobs to generate.\n";
+    fprintf(stderr, "Producer(%d): No more jobs to generate.\n", id);
 
   pthread_exit(0);
 }
@@ -192,7 +193,7 @@ void *consumer (void *params)
     head = job_id % parameters->queue_size;
 
     //sem_wait(parameters->sem_id, COUT_SEMPHORE);
-    cout << "Consumer(" << id << "): Job ID " << job_id << " executing sleep duration " << job_time << ".\n";
+    fprintf(stderr, "Consumer(%d): Job ID %d executing sleep duration %d.\n", id, job_id, job_time);
     //sem_signal(parameters->sem_id, COUT_SEMPHORE);
 
     sem_signal(parameters->sem_id, MUTEX_SEMAPHORE);
@@ -200,10 +201,10 @@ void *consumer (void *params)
 
     consume(job_time);
     //sem_wait(parameters->sem_id, COUT_SEMPHORE);
-    cout << "Consumer(" << id << "): Job ID " << job_id << " completed.\n";
+    fprintf(stderr, "Consumer(%d): Job ID %d completed.\n", id, job_id);
     //sem_signal(parameters->sem_id, COUT_SEMPHORE);
   }
-  cout << "Consumer(" << id << "): No jobs left.\n";
+  fprintf(stderr, "Consumer(%d): No jobs left.\n", id);
 
   pthread_exit(0);
 }
